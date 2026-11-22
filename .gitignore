@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.pytest_cache/
+
+# Local database and reports
+*.db
+test-results.xml
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Assignment 2 reports and build output
+coverage.xml
+.coverage
+.scannerwork/
+dist/
