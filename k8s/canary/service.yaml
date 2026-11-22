@@ -1,0 +1,14 @@
+# Selects BOTH tracks (only app=aceest), so traffic is shared by pod count.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest
+  namespace: aceest-canary
+spec:
+  type: NodePort
+  selector:
+    app: aceest
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30083

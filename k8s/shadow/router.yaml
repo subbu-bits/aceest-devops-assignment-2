@@ -1,0 +1,92 @@
+# SHADOW router (nginx): serves users from live, mirrors traffic to shadow.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: router-config
+  namespace: aceest-shadow
+data:
+  default.conf: |
+    upstream live { server aceest-live:80; }
+    upstream shadow { server aceest-shadow:80; }
+
+    server {
+        listen 80;
+
+        location = /router-health {
+            return 200 "ok\n";
+        }
+
+        # Users get the LIVE response. nginx also sends a copy of the request
+        # to the SHADOW version and ignores whatever it answers.
+        location / {
+            mirror /_shadow;
+            mirror_request_body on;
+            proxy_pass http://live;
+            proxy_set_header Host $host;
+            add_header X-Shadowed "true" always;
+        }
+
+        location = /_shadow {
+            internal;
+            proxy_pass http://shadow$request_uri;
+            proxy_set_header X-Shadow-Request "true";
+            proxy_connect_timeout 1s;
+            proxy_read_timeout 2s;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: router
+  namespace: aceest-shadow
+  labels:
+    app: router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: router
+  template:
+    metadata:
+      labels:
+        app: router
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /router-health
+              port: 80
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: config
+          configMap:
+            name: router-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: router
+  namespace: aceest-shadow
+spec:
+  type: NodePort
+  selector:
+    app: router
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30085

@@ -1,0 +1,25 @@
+# One namespace per deployment strategy, so all five can run side by side.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-rolling
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-bluegreen
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-canary
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-ab
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-shadow

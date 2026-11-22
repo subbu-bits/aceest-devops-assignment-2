@@ -1,0 +1,100 @@
+# A/B TESTING router (nginx): splits users between variant A and B.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: router-config
+  namespace: aceest-ab
+data:
+  default.conf: |
+    upstream variant_a { server aceest-a:80; }
+    upstream variant_b { server aceest-b:80; }
+
+    # How a user is assigned to a variant:
+    #   1. an "X-Variant: A|B" request header wins (for testing),
+    #   2. else the "variant" cookie from an earlier visit (sticky),
+    #   3. else a random 50/50 split for new users.
+    split_clients "${request_id}" $random_variant {
+        50%     a;
+        *       b;
+    }
+    map $cookie_variant $cookie_or_random {
+        a        a;
+        b        b;
+        default  $random_variant;
+    }
+    map $http_x_variant $variant {
+        ~*^a$    a;
+        ~*^b$    b;
+        default  $cookie_or_random;
+    }
+
+    server {
+        listen 80;
+
+        location = /router-health {
+            return 200 "ok\n";
+        }
+
+        location / {
+            proxy_pass http://variant_$variant;
+            proxy_set_header Host $host;
+            add_header X-Variant $variant always;
+            add_header Set-Cookie "variant=$variant; Path=/; Max-Age=86400" always;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: router
+  namespace: aceest-ab
+  labels:
+    app: router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: router
+  template:
+    metadata:
+      labels:
+        app: router
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /router-health
+              port: 80
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: config
+          configMap:
+            name: router-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: router
+  namespace: aceest-ab
+spec:
+  type: NodePort
+  selector:
+    app: router
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30084

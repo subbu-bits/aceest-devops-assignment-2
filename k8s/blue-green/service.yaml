@@ -1,0 +1,33 @@
+# Live service: the selector's colour receives all user traffic.
+# scripts/deploy.sh switches it; scripts/rollback.sh switches it back.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest
+  namespace: aceest-bluegreen
+spec:
+  type: NodePort
+  selector:
+    app: aceest
+    color: __LIVE__
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30082
+---
+# Preview service: always points at the idle colour, so the new version can
+# be tested before users are switched to it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-preview
+  namespace: aceest-bluegreen
+spec:
+  type: NodePort
+  selector:
+    app: aceest
+    color: __IDLE__
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30092
