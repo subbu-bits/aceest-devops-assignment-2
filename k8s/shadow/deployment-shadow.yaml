@@ -1,0 +1,47 @@
+# SHADOW - shadow: the new version. It receives a COPY of every request,
+# but its responses are thrown away, so users are never affected by it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-shadow
+  namespace: aceest-shadow
+  labels:
+    app: aceest
+    role: shadow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aceest
+      role: shadow
+  template:
+    metadata:
+      labels:
+        app: aceest
+        role: shadow
+    spec:
+      containers:
+        - name: aceest
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

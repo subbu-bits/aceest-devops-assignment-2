@@ -1,0 +1,46 @@
+# A/B TESTING - variant A (control): the current version.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-a
+  namespace: aceest-ab
+  labels:
+    app: aceest
+    variant: a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aceest
+      variant: a
+  template:
+    metadata:
+      labels:
+        app: aceest
+        variant: a
+    spec:
+      containers:
+        - name: aceest
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

@@ -1,0 +1,48 @@
+# BLUE-GREEN: one template, rendered twice (color=blue and color=green).
+# Both colours run at the same time. The 'aceest' Service sends ALL traffic to
+# one colour; switching is one selector change, and so is the rollback.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-__COLOR__
+  namespace: aceest-bluegreen
+  labels:
+    app: aceest
+    color: __COLOR__
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aceest
+      color: __COLOR__
+  template:
+    metadata:
+      labels:
+        app: aceest
+        color: __COLOR__
+    spec:
+      containers:
+        - name: aceest
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

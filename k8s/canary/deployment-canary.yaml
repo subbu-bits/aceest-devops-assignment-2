@@ -1,0 +1,49 @@
+# CANARY - canary track: 1 pod of the new version.
+# The Service selects app=aceest (both tracks), so about 1 in 4 requests (25%)
+# reach the canary. Scale this deployment up to send it more traffic.
+# Rollback: scale it to 0. Promote: put its image on the stable track.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-canary
+  namespace: aceest-canary
+  labels:
+    app: aceest
+    track: canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aceest
+      track: canary
+  template:
+    metadata:
+      labels:
+        app: aceest
+        track: canary
+    spec:
+      containers:
+        - name: aceest
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
