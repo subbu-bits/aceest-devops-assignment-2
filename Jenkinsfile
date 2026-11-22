@@ -27,7 +27,7 @@ pipeline {
     }
 
     environment {
-        DOCKERHUB_USER = 'CHANGE_ME'   // <-- put your Docker Hub username here
+        DOCKERHUB_USER = 'subbubits'   // <-- put your Docker Hub username here
         IMAGE_NAME = "${DOCKERHUB_USER}/aceest-fitness"
     }
 
